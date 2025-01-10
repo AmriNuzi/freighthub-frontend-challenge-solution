@@ -56,6 +56,18 @@
       </template>
     </v-data-table>
 
+    <v-dialog v-model="deleteDialog" max-width="500px" height="300px">
+      <v-card>
+        <v-card-title class="headline">Deshironi te vazdoni</v-card-title>
+        <v-card-actions>
+          <v-btn text @click="deleteDialog = false">Anulo</v-btn>
+          <v-btn color="red darken-1" @click="deleteItemConfirm(item.id)"
+            >Fshi</v-btn
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-toolbar flat class="fixed-pagination">
       <v-spacer></v-spacer>
       <v-pagination
@@ -69,12 +81,12 @@
     <v-dialog v-model="editDialog" max-width="500px">
       <v-card>
         <v-card-title>
-          <span class="headline"> edit</span>
+          <span class="headline">Edit</span>
         </v-card-title>
         <v-card-text>
           <v-text-field
             v-model="editedShipment.name"
-            label="Emri i Ngarkeses"
+            label="Emri i Ngarkesës"
             outlined
           ></v-text-field>
         </v-card-text>
@@ -100,6 +112,7 @@ export default {
       sortBy: "id",
       sortDesc: false,
       editDialog: false,
+      deleteDialog: false,
       editedShipment: {},
       headers: [
         { text: "ID", value: "id" },
@@ -120,12 +133,29 @@ export default {
   computed: {
     filteredShipments() {
       const searchTerm = this.search.toLowerCase();
-      return this.shipments.filter(
-        (shipment) =>
-          shipment.id.toString().includes(searchTerm) ||
-          shipment.name.toLowerCase().includes(searchTerm)
-      );
+
+      return this.shipments.filter((shipment) => {
+        return (
+          (shipment.id &&
+            shipment.id.toString().toLowerCase().includes(searchTerm)) ||
+          (shipment.name && shipment.name.toLowerCase().includes(searchTerm)) ||
+          (shipment.cargo &&
+            shipment.cargo.some((cargo) =>
+              `${cargo.type} ${cargo.description} ${cargo.volume}`
+                .toLowerCase()
+                .includes(searchTerm)
+            )) ||
+          (shipment.type && shipment.type.toLowerCase().includes(searchTerm)) ||
+          (shipment.destination &&
+            shipment.destination.toLowerCase().includes(searchTerm)) ||
+          (shipment.origin &&
+            shipment.origin.toLowerCase().includes(searchTerm)) ||
+          (shipment.status &&
+            shipment.status.toLowerCase().includes(searchTerm))
+        );
+      });
     },
+
     paginatedData() {
       const startIndex = (this.currentPage - 1) * this.itemsPerPage;
       const endIndex = startIndex + this.itemsPerPage;
@@ -140,19 +170,44 @@ export default {
     async getData() {
       try {
         const response = await axios.get("http://localhost:3000/shipments");
-        this.shipments = response.data; 
-
+        this.shipments = response.data;
       } catch (error) {
         console.error("error ne get", error);
       }
     },
-    async deleteItem(id) {
+    async viewItem(id) {
       try {
-        await axios.delete(`http://localhost:3000/shipments/${id}`);
-        this.getData(); 
+        const response = await axios.get(
+          `http://localhost:3000/shipments/${id}`
+        );
+        console.log("res get", response.data);
+        this.$router.push({ name: "shipment-details", params: { id } });
       } catch (error) {
-        console.error("Error deleting shipment:", error);
+        console.error("error", error);
       }
+    },
+
+    confirmDelete(id) {
+      this.itemToDelete = id;
+      this.deleteDialog = true;
+    },
+
+    async deleteItemConfirm() {
+      if (this.itemToDelete) {
+        try {
+          await axios.delete(
+            `http://localhost:3000/shipments/${this.itemToDelete}`
+          );
+          this.getData();
+          this.deleteDialog = false;
+        } catch (error) {
+          console.error("Error deleting item:", error);
+        }
+      }
+    },
+    editItem(item) {
+      this.editedShipment = { ...item }; 
+      this.editDialog = true; 
     },
     async saveEdit() {
       try {
@@ -160,11 +215,10 @@ export default {
           `http://localhost:3000/shipments/${this.editedShipment.id}`,
           this.editedShipment
         );
-        console.log("Edited Shipment:", this.editedShipment);
         this.getData(); 
-        this.editDialog = false;
+        this.editDialog = false; 
       } catch (error) {
-        console.error("Error saving shipment:", error);
+        console.error("error", error);
       }
     },
   },

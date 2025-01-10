@@ -1,65 +1,56 @@
 <template>
   <v-container>
     <v-toolbar dark color="#2e76bc">
-      <v-toolbar-title>Shipments</v-toolbar-title>
+      <v-toolbar-title>Details</v-toolbar-title>
+      <v-spacer />
+      <v-btn icon @click="$router.go(-1)">
+        <v-icon>mdi-arrow-left</v-icon>
+      </v-btn>
     </v-toolbar>
-    <v-data-table
-      :headers="headers"
-      :items="shipmentDetails"
-      item-key="id"
-      dense
-      hide-default-footer
-    >
-      <template v-slot:item="{ item }">
-        <tr>
-          <td>{{ item.id }}</td>
-          <td>{{ item.name }}</td>
-          <td>{{ item.destination }}</td>
-          <td>{{ item.origin }}</td>
-          <td>{{ item.type }}</td>
-          <td>{{ item.status }}</td>
-        </tr>
-      </template>
-    </v-data-table>
-    <br />
-
-    <v-btn @click="goBack()">Go Back</v-btn>
+    <v-card class="mt-4">
+      <v-card-title>Ngarkesa: {{ shipment.name }}</v-card-title>
+      <v-card-text>
+        <p><strong>ID:</strong> {{ shipment.id }}</p>
+        <p><strong>Origjina:</strong> {{ shipment.origin }}</p>
+        <p><strong>Destinacioni:</strong> {{ shipment.destination }}</p>
+        <p><strong>Statusi:</strong> {{ shipment.status }}</p>
+        <p><strong>Ngarkesa:</strong></p>
+        <ul>
+          <li v-for="(cargo, index) in shipment.cargo" :key="index">
+            {{ cargo.type }}: {{ cargo.description }} (Vellimi:
+            {{ cargo.volume }})
+          </li>
+        </ul>
+      </v-card-text>
+      <v-btn @click="goBack">Go Back</v-btn>
+    </v-card>
   </v-container>
 </template>
 
 <script>
-import shipmentsData from "../data/db.json";
+import axios from "axios";
 
 export default {
-  props: ["id"],
   data() {
     return {
-      shipment: null,
-      headers: [
-        { text: "ID", value: "id" },
-        { text: "Name", value: "name" },
-        { text: "Destination", value: "destination" },
-        { text: "Origin", value: "origin" },
-        { text: "Type", value: "type" },
-        { text: "Status", value: "status" },
-      ],
-      shipmentDetails: [],
+      shipment: {},
     };
   },
-  created() {
-    this.loadShipmentDetails();
-  },
   methods: {
-    loadShipmentDetails() {
-      this.shipment = shipmentsData.find((item) => item.id === this.id);
-
-      if (this.shipment) {
-        this.shipmentDetails = [this.shipment];
-      }
-    },
     goBack() {
       this.$router.push({ name: "shipment-list" });
     },
   },
+  async created() {
+    const id = this.$route.params.id;
+    try {
+      const response = await axios.get(`http://localhost:3000/shipments/${id}`);
+      this.shipment = response.data;
+    } catch (error) {
+      console.error("Gabim gjatë marrjes së të dhënave për ngarkesën:", error);
+    }
+  },
 };
 </script>
+
+<style scoped></style>
