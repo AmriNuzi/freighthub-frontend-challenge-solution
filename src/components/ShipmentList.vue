@@ -88,7 +88,7 @@
 </template>
 
 <script>
-import shipmentsData from "@/assets/db.json";
+import axios from "axios";
 
 export default {
   data() {
@@ -122,7 +122,7 @@ export default {
       const searchTerm = this.search.toLowerCase();
       return this.shipments.filter(
         (shipment) =>
-          shipment.id.toLowerCase().includes(searchTerm) ||
+          shipment.id.toString().includes(searchTerm) ||
           shipment.name.toLowerCase().includes(searchTerm)
       );
     },
@@ -138,45 +138,34 @@ export default {
 
   methods: {
     async getData() {
-      const storedShipments = localStorage.getItem("shipments");
-      if (storedShipments) {
-        this.shipments = JSON.parse(storedShipments);
-      } else {
-        this.shipments = shipmentsData;
-        localStorage.setItem("shipments", JSON.stringify(this.shipments));
+      try {
+        const response = await axios.get("http://localhost:3000/shipments");
+        this.shipments = response.data; 
+
+      } catch (error) {
+        console.error("error ne get", error);
       }
     },
-    viewItem(id) {
-      this.$router.push({ name: "shipment-details", params: { id } });
-    },
-    confirmDelete(id) {
-      const confirmed = confirm("A deshironi te vazhdoni?");
-      if (confirmed) {
-        this.deleteItem(id);
+    async deleteItem(id) {
+      try {
+        await axios.delete(`http://localhost:3000/shipments/${id}`);
+        this.getData(); 
+      } catch (error) {
+        console.error("Error deleting shipment:", error);
       }
     },
-    deleteItem(id) {
-      this.shipments = this.shipments.filter((shipment) => shipment.id !== id);
-      this.saveShipments();
-    },
-    editItem(item) {
-      this.editedShipment = { ...item };
-      this.editDialog = true;
-    },
-    saveEdit() {
-      const index = this.shipments.findIndex(
-        (shipment) => shipment.id === this.editedShipment.id
-      );
-      if (index !== -1) {
-        this.shipments[index] = { ...this.editedShipment };
+    async saveEdit() {
+      try {
+        await axios.put(
+          `http://localhost:3000/shipments/${this.editedShipment.id}`,
+          this.editedShipment
+        );
         console.log("Edited Shipment:", this.editedShipment);
-        this.saveShipments();
+        this.getData(); 
         this.editDialog = false;
+      } catch (error) {
+        console.error("Error saving shipment:", error);
       }
-    },
-    saveShipments() {
-      localStorage.setItem("shipments", JSON.stringify(this.shipments));
-      this.getData();
     },
   },
 

@@ -28,7 +28,7 @@
 </template>
 
 <script>
-import shipmentsData from "../assets/db.json";
+import shipmentsData from "../data/db.json";
 
 export default {
   props: ["id"],
